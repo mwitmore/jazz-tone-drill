@@ -8,6 +8,8 @@ Phone-first practice-stand app for naming **chord tones** (and optionally the **
 `https://jazz-tone-drill.pages.dev`  
 (or the URL Cloudflare shows). Add that page to your Home Screen.
 
+**App Store (later):** see [docs/app-store-plan.md](docs/app-store-plan.md). Do not start it until the web app is stable. It is a Capacitor wrap of this same repo, not a rewrite.
+
 ## Run locally
 
 ```bash
@@ -69,6 +71,8 @@ You do **not** need to run a local server on your phone.
    - Branch: `main`
 
 After that, every push to `main` (including from Cursor on your phone) updates the live site.
+
+When we change the app in Cursor on this Mac, the agent runs `npm run deploy` so https://jazz-tone-drill.pages.dev updates without an extra step. Docs-only edits are not deployed.
 
 ### Later deploys from a laptop
 

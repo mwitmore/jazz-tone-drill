@@ -1,0 +1,18 @@
+---
+description: Deploy Jazz Tone Drill to Cloudflare Pages after app changes
+alwaysApply: true
+---
+
+# Autodeploy to Cloudflare
+
+After a change that affects the live practice app (UI, theory, audio, settings — not docs-only), deploy without being asked:
+
+```bash
+npm run deploy
+```
+
+That builds and uploads to the Pages project `jazz-tone-drill`.
+
+Live URL: https://jazz-tone-drill.pages.dev
+
+Tell the user that URL when the deploy finishes. Do not start a long-running dev server unless they ask. Docs-only or plan-only edits do not need a deploy.
