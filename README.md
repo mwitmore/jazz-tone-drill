@@ -2,9 +2,11 @@
 
 Phone-first practice-stand app for naming **chord tones** (and optionally the **parent scale/mode**) over isolated chords and short jazz sequences. Use iReal Pro for time. Use this for 10–15 minutes of forced naming.
 
-**Live site:** after the first Cloudflare deploy, it will be  
+**Repo:** [github.com/mwitmore/jazz-tone-drill](https://github.com/mwitmore/jazz-tone-drill)
+
+**Live site:** after you connect this repo in Cloudflare Pages (one-time, below), it will be  
 `https://jazz-tone-drill.pages.dev`  
-(or the URL printed by `npm run deploy`). Add that page to your Home Screen for a stand-alone app.
+(or the URL Cloudflare shows). Add that page to your Home Screen.
 
 ## Run locally
 
@@ -17,7 +19,7 @@ Then `npm run build` / `npm test` / `npm run deploy` as needed.
 
 ## Edit from your phone (Cursor)
 
-1. Open this GitHub repo in the Cursor app.
+1. Open [mwitmore/jazz-tone-drill](https://github.com/mwitmore/jazz-tone-drill) in the Cursor app.
 2. Change the file you need (table below).
 3. Commit and **push to `main`**.
 4. If Cloudflare Pages is connected to the repo, the live site rebuilds in a minute or two. Hard-refresh the phone page (or close the tab) to see it.
