@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Jazz Tone Drill">
+  <rect width="128" height="128" rx="28" fill="#16130f"/>
+  <path d="M24 46h80M24 64h80M24 82h80" stroke="#3a3228" stroke-width="3"/>
+  <circle cx="44" cy="64" r="7" fill="#e8a54b"/>
+  <circle cx="68" cy="46" r="7" fill="#f3ead8"/>
+  <circle cx="86" cy="82" r="7" fill="#e07a6a"/>
+  <text x="96" y="38" fill="#e8a54b" font-size="28" font-family="Georgia, serif" font-style="italic">7</text>
+</svg>
