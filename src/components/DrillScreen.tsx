@@ -232,12 +232,20 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
         onPick={onPickNote}
       />
 
-      {needsMode && (
+      {(needsMode || phase === 'reveal') && (
         <ModeChips
           choices={question.modeChoices}
           selected={pickedMode}
-          disabled={phase === 'reveal'}
-          result={phase === 'reveal' ? (modeOk ? 'correct' : 'wrong') : null}
+          disabled={phase === 'reveal' || !needsMode}
+          result={
+            phase === 'reveal'
+              ? needsMode
+                ? modeOk
+                  ? 'correct'
+                  : 'wrong'
+                : 'correct'
+              : null
+          }
           expectedId={question.preferredModeId}
           acceptable={question.acceptableModeIds}
           onPick={onPickMode}
