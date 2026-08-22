@@ -26,5 +26,5 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          accountId: "282fff1786f1c04217c4662922769364"
           command: pages deploy dist --project-name jazz-tone-drill
