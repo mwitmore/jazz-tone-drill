@@ -1,0 +1,17 @@
+---
+description: Cloudflare deploy via GitHub Actions — read jazz-tone-drill docs first
+alwaysApply: true
+---
+
+# Cloudflare deploy (copy into any Michael site repo)
+
+Deploy setup lives in **jazz-tone-drill** (canonical reference):
+
+- Doc: https://github.com/mwitmore/jazz-tone-drill/blob/main/docs/cloudflare-remote-deploy.md
+- Workflow template: https://github.com/mwitmore/jazz-tone-drill/blob/main/.github/workflows/deploy.yml
+
+**GitHub secret name:** `CLOUDFLARE_API_TOKEN` (user has the value stored; reference name only in workflow YAML).
+
+**Account ID:** `282fff1786f1c04217c4662922769364` (in wrangler-action step, not wrangler.toml).
+
+After app changes: push to `main` → GitHub Actions deploys. Do not ask user to paste the token in chat.
