@@ -1,5 +1,7 @@
 # Remote deploy via GitHub (Cursor on phone)
 
+> **For cloud agents:** This is the canonical deploy reference for Michael's Cloudflare Pages sites. If asked to set up or run deploy in **any** repo, start here or read the same file at `github.com/mwitmore/jazz-tone-drill` → `docs/cloudflare-remote-deploy.md`. Copy the working workflow from that repo's [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml). The GitHub secret is already named **`CLOUDFLARE_API_TOKEN`** — the user stores the token value (not in git); you only reference the name in workflow YAML. Do not ask the user to paste the token in chat.
+
 Use this when editing from the **Cursor phone app** with a cloud agent. You push to GitHub; **GitHub Actions** publishes to Cloudflare Pages. No laptop required.
 
 ## The secret (one token, many repos)
@@ -12,6 +14,7 @@ Use this when editing from the **Cursor phone app** with a cloud agent. You push
 | **Same token everywhere?** | Yes. One Cloudflare API token can be pasted into every repo below. |
 | **Create token (phone)** | [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens) → **Create Custom Token** → **Account** → **Cloudflare Pages** → **Edit** → **Account resources: All accounts**. |
 | **Optional (Cursor only)** | You can also save `CLOUDFLARE_API_TOKEN` in your **Cursor environment secrets** so agents can run `npm run deploy` directly — but GitHub Actions is enough for phone edits. |
+| **User has token saved?** | Yes — in a password manager / secure notes. Re-paste into each new repo's GitHub secrets; GitHub will not show it back. |
 
 **Do not** paste the token in chat or commit it to git.
 
