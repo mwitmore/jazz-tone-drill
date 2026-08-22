@@ -48,6 +48,8 @@ You do **not** need to run a local server on your phone.
 
 ## Deploy to Cloudflare Pages
 
+**Phone / remote edits:** push to `main` → GitHub Actions deploys automatically. One-time: add GitHub repo secret **`CLOUDFLARE_API_TOKEN`** (see [docs/cloudflare-remote-deploy.md](docs/cloudflare-remote-deploy.md)). Same guide covers BitBard, explore.bitbard.io, and michaelwitmore.com.
+
 ### First time (laptop)
 
 1. Install and log in (opens a browser):
