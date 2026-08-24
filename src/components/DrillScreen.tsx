@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { isAudioReady, playCadence, playRootAndInterval, playScale, unlockAndPlay } from '../audio/playChord.ts'
+import { isAudioReady, playCadence, playRootAndInterval, unlockAndPlay } from '../audio/playChord.ts'
 import { CadenceCard } from './CadenceCard.tsx'
 import { dealCadence, type CadenceQuestion } from '../theory/cadences.ts'
 import { notePc } from '../theory/notes.ts'
@@ -49,14 +49,12 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
   const cursorRef = useRef(cursor)
   const revealRef = useRef<(tappedNote: string, tappedMode: ModeId | null) => void>(() => {})
   const goNextRef = useRef<() => void>(() => {})
-  const phaseRef = useRef(phase)
   settingsRef.current = settings
   questionRef.current = question
   cadenceRef.current = cadenceQuestion
   pickedNoteRef.current = pickedNote
   pickedModeRef.current = pickedMode
   cursorRef.current = cursor
-  phaseRef.current = phase
 
   const isCadence = settings.drillMode === 'cadence'
   const needsMode = settings.drillMode === 'tones+mode'
@@ -155,17 +153,7 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
   const heardIdRef = useRef('')
   const [soundOn, setSoundOn] = useState(false)
 
-  const hearScale = () => {
-    const pcs = questionRef.current.parent.notes.map((n) => notePc(n.note))
-    playScale(pcs)
-    setSoundOn(true)
-  }
-
   const hearCurrent = (forceUnlock: boolean) => {
-    if (settingsRef.current.drillMode === 'tones+mode' && phaseRef.current === 'reveal') {
-      hearScale()
-      return
-    }
     const q = questionRef.current
     const id = `${q.symbol}:${q.degree}:${q.expectedSemitones}`
     const play = forceUnlock
@@ -223,11 +211,6 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
     const t = window.setTimeout(() => goNextRef.current(), 1600)
     return () => window.clearTimeout(t)
   }, [phase, settings.autoAdvanceSec, isCadence])
-
-  useEffect(() => {
-    if (!needsMode || phase !== 'reveal' || !isAudioReady()) return
-    hearScale()
-  }, [needsMode, phase, question.symbol, question.preferredModeId])
 
   const resetSet = () => {
     setScore({ correct: 0, total: 0, streak: 0 })
