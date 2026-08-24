@@ -2,8 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { playCadenceRoots } from '../audio/playChord.ts'
 import { cadenceRootPcs, formatKeyName, type CadenceQuestion } from '../theory/cadences.ts'
 
-const FLASH_MS = 2400
-
 type CadenceCardProps = {
   question: CadenceQuestion
   autoAdvanceSec: number | null
@@ -12,7 +10,7 @@ type CadenceCardProps = {
 }
 
 export function CadenceCard({ question, autoAdvanceSec, onAnswer, onNext }: CadenceCardProps) {
-  const [phase, setPhase] = useState<'flash' | 'ask' | 'reveal'>('flash')
+  const [phase, setPhase] = useState<'ask' | 'reveal'>('ask')
   const [picked, setPicked] = useState<string | null>(null)
   const [correct, setCorrect] = useState(false)
   const [remainingMs, setRemainingMs] = useState<number | null>(null)
@@ -21,14 +19,16 @@ export function CadenceCard({ question, autoAdvanceSec, onAnswer, onNext }: Cade
   onAnswerRef.current = onAnswer
 
   useEffect(() => {
-    setPhase('flash')
+    setPhase('ask')
     setPicked(null)
     setCorrect(false)
     timedOutRef.current = false
-    playCadenceRoots(cadenceRootPcs(question))
-    const flashTimer = window.setTimeout(() => setPhase('ask'), FLASH_MS)
-    return () => window.clearTimeout(flashTimer)
   }, [question])
+
+  useEffect(() => {
+    if (phase !== 'reveal') return
+    playCadenceRoots(cadenceRootPcs(question))
+  }, [phase, question])
 
   useEffect(() => {
     if (phase !== 'ask' || autoAdvanceSec === null) {
@@ -57,7 +57,7 @@ export function CadenceCard({ question, autoAdvanceSec, onAnswer, onNext }: Cade
 
   useEffect(() => {
     if (phase !== 'reveal' || autoAdvanceSec === null) return
-    const timer = window.setTimeout(() => onNext(), 1600)
+    const timer = window.setTimeout(() => onNext(), 2200)
     return () => window.clearTimeout(timer)
   }, [phase, autoAdvanceSec, onNext])
 
@@ -73,7 +73,7 @@ export function CadenceCard({ question, autoAdvanceSec, onAnswer, onNext }: Cade
   return (
     <section className="cadence" aria-live="polite">
       <p className="cadence-key">
-        {phase === 'flash' ? 'Watch the cadence' : question.label} · {formatKeyName(question.keyName)}
+        {question.label} · {formatKeyName(question.keyName)}
       </p>
 
       {autoAdvanceSec !== null && remainingMs !== null && phase === 'ask' && (
@@ -111,34 +111,31 @@ export function CadenceCard({ question, autoAdvanceSec, onAnswer, onNext }: Cade
         })}
       </ol>
 
-      {phase === 'flash' && <p className="prompt">Remember all three</p>}
       {phase === 'ask' && <p className="prompt">Name the missing chord</p>}
       {phase === 'reveal' && (
         <p className="reveal-verdict">{correct ? 'Right' : `It’s ${question.expected}`}</p>
       )}
 
-      {phase !== 'flash' && (
-        <div className="cadence-choices">
-          {question.choices.map((choice) => {
-            const selected = picked === choice
-            let tone: string | null = null
-            if (phase === 'reveal' && choice === question.expected) tone = 'is-correct'
-            else if (phase === 'reveal' && selected && !correct) tone = 'is-wrong'
-            else if (phase === 'ask' && selected) tone = 'is-selected'
-            return (
-              <button
-                key={choice}
-                type="button"
-                className={`chip ${tone ?? ''}`}
-                disabled={phase === 'reveal'}
-                onClick={() => pick(choice)}
-              >
-                {choice}
-              </button>
-            )
-          })}
-        </div>
-      )}
+      <div className="cadence-choices">
+        {question.choices.map((choice) => {
+          const selected = picked === choice
+          let tone: string | null = null
+          if (phase === 'reveal' && choice === question.expected) tone = 'is-correct'
+          else if (phase === 'reveal' && selected && !correct) tone = 'is-wrong'
+          else if (phase === 'ask' && selected) tone = 'is-selected'
+          return (
+            <button
+              key={choice}
+              type="button"
+              className={`chip ${tone ?? ''}`}
+              disabled={phase === 'reveal'}
+              onClick={() => pick(choice)}
+            >
+              {choice}
+            </button>
+          )
+        })}
+      </div>
 
       {phase === 'reveal' && autoAdvanceSec === null && (
         <button type="button" className="primary-btn reveal-next" onClick={onNext}>
