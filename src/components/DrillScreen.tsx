@@ -248,9 +248,9 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
           {score.total > 0 ? ` · ✓${score.correct}` : ''}
           {score.streak > 1 ? ` · ${score.streak}` : ''}
         </p>
-        {!isCadence && phase === 'ask' && (
+        {!isCadence && (
           <button type="button" className="primary-btn" onClick={goNext}>
-            Skip
+            {phase === 'reveal' ? 'Next' : 'Skip'}
           </button>
         )}
         {isCadence && <span className="score" aria-hidden="true" />}
@@ -333,20 +333,12 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
               onPick={onPickNote}
             />
 
-            {(needsMode || phase === 'reveal') && (
+            {needsMode && (
               <ModeChips
                 choices={question.modeChoices}
                 selected={pickedMode}
-                disabled={phase === 'reveal' || !needsMode}
-                result={
-                  phase === 'reveal'
-                    ? needsMode
-                      ? modeOk
-                        ? 'correct'
-                        : 'wrong'
-                      : 'correct'
-                    : null
-                }
+                disabled={phase === 'reveal'}
+                result={phase === 'reveal' ? (modeOk ? 'correct' : 'wrong') : null}
                 expectedId={question.preferredModeId}
                 acceptable={question.acceptableModeIds}
                 onPick={onPickMode}
@@ -354,7 +346,12 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
             )}
 
             {phase === 'reveal' ? (
-              <RevealCard question={question} noteOk={noteOk} modeOk={modeOk} />
+              <RevealCard
+                question={question}
+                noteOk={noteOk}
+                modeOk={modeOk}
+                onNext={settings.autoAdvanceSec === null ? goNext : undefined}
+              />
             ) : (
               <div className="tempo-bar" role="group" aria-label="Auto-advance">
                 {([null, 4, 6, 8, 12] as const).map((sec) => (

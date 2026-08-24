@@ -4,10 +4,12 @@ type RevealCardProps = {
   question: Question
   noteOk: boolean
   modeOk: boolean | null
+  onNext?: () => void
 }
 
-export function RevealCard({ question, noteOk, modeOk }: RevealCardProps) {
+export function RevealCard({ question, noteOk, modeOk, onNext }: RevealCardProps) {
   const { parent } = question
+  const showMode = modeOk !== null
   return (
     <section className="reveal" aria-live="polite">
       <p className="reveal-verdict">
@@ -26,18 +28,27 @@ export function RevealCard({ question, noteOk, modeOk }: RevealCardProps) {
           </span>
         ))}
       </div>
-      <p className="parent-line">
-        <strong>{parent.mode.name}</strong>
-        {parent.mode.family === 'diminished' ? '' : ` · ${parent.mode.modeIndex + 1 === 1 ? '' : `${ordinal(parent.mode.modeIndex + 1)} mode of `}${parent.parentLabel}`}
-      </p>
-      <div className="scale-row">
-        {parent.notes.map((n) => (
-          <span key={`${n.label}-${n.name}`}>
-            <small>{n.label}</small>
-            {n.name}
-          </span>
-        ))}
-      </div>
+      {showMode && (
+        <>
+          <p className="parent-line">
+            <strong>{parent.mode.name}</strong>
+            {parent.mode.family === 'diminished' ? '' : ` · ${parent.mode.modeIndex + 1 === 1 ? '' : `${ordinal(parent.mode.modeIndex + 1)} mode of `}${parent.parentLabel}`}
+          </p>
+          <div className="scale-row">
+            {parent.notes.map((n) => (
+              <span key={`${n.label}-${n.name}`}>
+                <small>{n.label}</small>
+                {n.name}
+              </span>
+            ))}
+          </div>
+        </>
+      )}
+      {onNext && (
+        <button type="button" className="primary-btn reveal-next" onClick={onNext}>
+          Next
+        </button>
+      )}
     </section>
   )
 }
