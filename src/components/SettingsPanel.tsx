@@ -42,7 +42,7 @@ export function SettingsPanel({ open, settings, onChange, onClose, onResetScore 
         </header>
 
         <p className="help">
-          iReal covers time. A names the tone. B adds the parent mode. C (beta) flashes a jazz cadence, hides one chord, and you name the missing one — including tritone-sub and backdoor moves. Play always sounds the root, then the asked tone. Turn on auto sound if you want that on every new card (tap Play once first).
+          iReal covers time. A names the tone. B adds the parent mode. C (beta) shows a cadence with one chord hidden — name it from context, then hear the full progression on reveal. Tap Play to preview the cadence anytime. Turn on auto sound for A/B if you want tones on every new card (tap Play once first).
         </p>
 
         <section>
