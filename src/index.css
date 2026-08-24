@@ -469,14 +469,31 @@ h3 {
 }
 
 .tone-row > span,
-.scale-row > span {
+.tone-row > button,
+.scale-row > span,
+.scale-row > button {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   min-width: 1.9rem;
+  margin: 0;
+  padding: 2px 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
   font-family: 'IBM Plex Sans', 'Helvetica Neue', sans-serif;
   font-size: 1.1rem;
   font-weight: 600;
+}
+
+.tone-row > button,
+.scale-row > button {
+  border-radius: 8px;
+}
+
+.tone-row > button:active,
+.scale-row > button:active {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
 .note-name {

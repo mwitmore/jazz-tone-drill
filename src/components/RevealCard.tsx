@@ -1,4 +1,6 @@
+import { playTone } from '../audio/playChord.ts'
 import type { Question } from '../drills/types.ts'
+import { note, notePc } from '../theory/notes.ts'
 import { MusicText } from './MusicText.tsx'
 
 type RevealCardProps = {
@@ -23,12 +25,19 @@ export function RevealCard({ question, noteOk, modeOk, onNext }: RevealCardProps
       </p>
       <div className="tone-row">
         {question.allTones.map((tone) => (
-          <span key={tone.degree} className={tone.degree === question.degree ? 'is-asked' : ''}>
+          <button
+            key={tone.degree}
+            type="button"
+            className={tone.degree === question.degree ? 'is-asked' : ''}
+            aria-label={`Play ${tone.name}`}
+            onPointerDown={() => playNamedTone(tone.name)}
+            onClick={() => playNamedTone(tone.name)}
+          >
             <small>
               <MusicText text={tone.label} />
             </small>
             <MusicText className="note-name" text={tone.name} />
-          </span>
+          </button>
         ))}
       </div>
       {showMode && (
@@ -42,12 +51,18 @@ export function RevealCard({ question, noteOk, modeOk, onNext }: RevealCardProps
           </p>
           <div className="scale-row">
             {parent.notes.map((n) => (
-              <span key={`${n.label}-${n.name}`}>
+              <button
+                key={`${n.label}-${n.name}`}
+                type="button"
+                aria-label={`Play ${n.name}`}
+                onPointerDown={() => playTone(notePc(n.note))}
+                onClick={() => playTone(notePc(n.note))}
+              >
                 <small>
                   <MusicText text={n.label} />
                 </small>
                 <MusicText className="note-name" text={n.name} />
-              </span>
+              </button>
             ))}
           </div>
         </>
@@ -59,6 +74,14 @@ export function RevealCard({ question, noteOk, modeOk, onNext }: RevealCardProps
       )}
     </section>
   )
+}
+
+function playNamedTone(name: string): void {
+  try {
+    playTone(notePc(note(name)))
+  } catch {
+    // ignore unparseable display names
+  }
 }
 
 function ordinal(n: number): string {
