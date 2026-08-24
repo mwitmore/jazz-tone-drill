@@ -1,4 +1,5 @@
 import { CHORD_QUALITIES, DEGREE_IDS, QUALITY_LABELS, type ChordQuality, type DegreeId } from '../theory/chords.ts'
+import { MusicText } from './MusicText.tsx'
 import { ALL_KEYS, SEQUENCE_LABELS, type SequenceId } from '../theory/progressions.ts'
 import type { DrillSettings } from '../drills/types.ts'
 
@@ -134,7 +135,7 @@ export function SettingsPanel({ open, settings, onChange, onClose, onResetScore 
                 className={`chip ${settings.keys.includes(key) ? 'is-selected' : ''}`}
                 onClick={() => onChange({ ...settings, keys: toggle(settings.keys, key) })}
               >
-                {key.replace('b', '♭').replace('#', '♯')}
+                <MusicText text={key.replace('b', '♭').replace('#', '♯')} />
               </button>
             ))}
           </div>
@@ -150,7 +151,7 @@ export function SettingsPanel({ open, settings, onChange, onClose, onResetScore 
                 className={`chip ${settings.qualities.includes(q) ? 'is-selected' : ''}`}
                 onClick={() => onChange({ ...settings, qualities: toggle(settings.qualities, q) })}
               >
-                {QUALITY_LABELS[q]}
+                <MusicText text={QUALITY_LABELS[q]} />
               </button>
             ))}
           </div>
@@ -166,7 +167,7 @@ export function SettingsPanel({ open, settings, onChange, onClose, onResetScore 
                 className={`chip ${settings.degrees.includes(d) ? 'is-selected' : ''}`}
                 onClick={() => onChange({ ...settings, degrees: toggle(settings.degrees, d) })}
               >
-                {DEGREE_LABELS[d]}
+                <MusicText text={DEGREE_LABELS[d]} />
               </button>
             ))}
           </div>

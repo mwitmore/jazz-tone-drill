@@ -1,4 +1,5 @@
 import type { Question } from '../drills/types.ts'
+import { MusicText } from './MusicText.tsx'
 
 type RevealCardProps = {
   question: Question
@@ -13,32 +14,35 @@ export function RevealCard({ question, noteOk, modeOk, onNext }: RevealCardProps
   return (
     <section className="reveal" aria-live="polite">
       <p className="reveal-verdict">
-        {noteOk ? 'Tone is right' : `Tone is ${question.expectedNoteName}`}
+        {noteOk ? 'Tone is right' : <MusicText text={`Tone is ${question.expectedNoteName}`} />}
         {modeOk === null
           ? ''
           : modeOk
             ? ' · mode is right'
-            : ` · mode is ${parent.mode.name}`}
+            : <> · mode is <MusicText text={parent.mode.name} /></>}
       </p>
       <div className="tone-row">
         {question.allTones.map((tone) => (
           <span key={tone.degree} className={tone.degree === question.degree ? 'is-asked' : ''}>
             <small>{tone.label}</small>
-            <NoteName name={tone.name} />
+            <MusicText className="note-name" text={tone.name} />
           </span>
         ))}
       </div>
       {showMode && (
         <>
           <p className="parent-line">
-            <strong>{parent.mode.name}</strong>
-            {parent.mode.family === 'diminished' ? '' : ` · ${parent.mode.modeIndex + 1 === 1 ? '' : `${ordinal(parent.mode.modeIndex + 1)} mode of `}${parent.parentLabel}`}
+            <strong>
+              <MusicText text={parent.mode.name} />
+            </strong>
+            {parent.mode.family === 'diminished' ? '' : ` · ${parent.mode.modeIndex + 1 === 1 ? '' : `${ordinal(parent.mode.modeIndex + 1)} mode of `}`}
+            {parent.mode.family === 'diminished' ? '' : <MusicText text={parent.parentLabel} />}
           </p>
           <div className="scale-row">
             {parent.notes.map((n) => (
               <span key={`${n.label}-${n.name}`}>
                 <small>{n.label}</small>
-                <NoteName name={n.name} />
+                <MusicText className="note-name" text={n.name} />
               </span>
             ))}
           </div>
@@ -50,17 +54,6 @@ export function RevealCard({ question, noteOk, modeOk, onNext }: RevealCardProps
         </button>
       )}
     </section>
-  )
-}
-
-function NoteName({ name }: { name: string }) {
-  const letter = /^[A-G]/.test(name) ? name[0] : name
-  const accidental = letter === name ? '' : name.slice(letter.length)
-  return (
-    <span className="note-name">
-      <span className="note-letter">{letter}</span>
-      {accidental ? <span className="note-acc">{accidental}</span> : null}
-    </span>
   )
 }
 

@@ -7,6 +7,7 @@ import { advanceCursor, dealQuestion, gradeMode, gradeNote, initialCursor } from
 import type { DrillSettings, Question, Score, SessionCursor } from '../drills/types.ts'
 import type { ModeId } from '../theory/scales.ts'
 import { ModeChips } from './ModeChips.tsx'
+import { MusicText } from './MusicText.tsx'
 import { NotePad } from './NotePad.tsx'
 import { RevealCard } from './RevealCard.tsx'
 import { SettingsPanel } from './SettingsPanel.tsx'
@@ -269,8 +270,11 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
               <ul className="miss-list">
                 {misses.map((miss, index) => (
                   <li key={`${miss.symbol}-${index}`}>
-                    <b>{miss.symbol}</b> — {miss.degreeLabel} is {miss.expected}
-                    {miss.mode ? ` · ${miss.mode}` : ''}
+                    <b>
+                      <MusicText text={miss.symbol} />
+                    </b>{' '}
+                    — {miss.degreeLabel} is <MusicText text={miss.expected} />
+                    {miss.mode ? <> · <MusicText text={miss.mode} /></> : ''}
                   </li>
                 ))}
               </ul>
@@ -292,14 +296,16 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
               <ol className="sequence">
                 {question.sequence.symbols.map((symbol, i) => (
                   <li key={`${symbol}-${i}`} className={i === question.sequence?.index ? 'is-current' : ''}>
-                    {symbol}
+                    <MusicText text={symbol} />
                   </li>
                 ))}
               </ol>
             )}
 
             <div className="chord-stage">
-              <p className="chord-symbol">{question.symbol}</p>
+              <p className="chord-symbol">
+                <MusicText text={question.symbol} />
+              </p>
               <p className="prompt">{prompt}</p>
               {settings.autoSound && !soundOn && (
                 <p className="sound-hint">Tap Play once to unlock auto sound</p>

@@ -499,6 +499,17 @@ h3 {
   margin-left: 0.04em;
 }
 
+.chord-symbol .note-acc,
+.cadence-row .note-acc {
+  font-size: 0.7em;
+  top: -0.06em;
+}
+
+.pad-key .note-acc {
+  font-size: 0.8em;
+  top: -0.07em;
+}
+
 .tone-row small,
 .scale-row small {
   font-family: 'IBM Plex Sans', sans-serif;
