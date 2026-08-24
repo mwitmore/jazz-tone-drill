@@ -1,8 +1,31 @@
 import { allSpelledTones, type Chord } from '../theory/chords.ts'
 import { notePc } from '../theory/notes.ts'
 
+const SAMPLE_RATE = 44100
+
+const TONE = {
+  attack: 0.012,
+  release: 0.06,
+  askedDur: 0.72,
+  askedAmp: 0.22,
+  runNote: 0.3,
+  runStep: 0.22,
+  runAmp: 0.18,
+  partials: [
+    { ratio: 1, mix: 0.94 },
+    { ratio: 2, mix: 0.05 },
+    { ratio: 3, mix: 0.015 },
+  ],
+} as const
+
 let player: HTMLAudioElement | null = null
 let unlocked = false
+let lastUri = ''
+let lastPlayAt = 0
+
+const intervalCache = new Map<string, string>()
+const singleCache = new Map<number, string>()
+const runCache = new Map<string, string>()
 
 function media(): HTMLAudioElement {
   if (!player) {
@@ -10,6 +33,7 @@ function media(): HTMLAudioElement {
     player.preload = 'auto'
     player.setAttribute('playsinline', 'true')
     player.setAttribute('webkit-playsinline', 'true')
+    document.body?.appendChild(player)
   }
   return player
 }
@@ -30,54 +54,54 @@ function env(t: number, start: number, end: number): number {
   if (t < start || t > end) return 0
   const pos = t - start
   const dur = end - start
-  const attack = 0.07
-  const release = 0.2
-  if (pos < attack) return pos / attack
-  if (pos > dur - release) return Math.max(0, (dur - pos) / release)
+  if (pos < TONE.attack) return 0.5 * (1 - Math.cos((Math.PI * pos) / TONE.attack))
+  if (pos > dur - TONE.release) {
+    const releasePos = pos - (dur - TONE.release)
+    return 0.5 * (1 + Math.cos((Math.PI * releasePos) / TONE.release))
+  }
   return 1
 }
 
-function softTone(t: number, hz: number, start: number, end: number, amp: number): number {
+function onsetNoise(t: number, start: number): number {
+  const pos = t - start
+  if (pos < 0 || pos > 0.08) return 0
+  const fade = 1 - pos / 0.08
+  const sampleIndex = Math.floor(t * SAMPLE_RATE)
+  const noise = (((sampleIndex * 16807 + 12345) % 2147483647) / 1073741823.5 - 1) * fade * fade * 0.035
+  return noise
+}
+
+function synthSample(t: number, hz: number, start: number, end: number, amp: number): number {
   const gain = env(t, start, end)
   if (gain === 0) return 0
-  const p = 2 * Math.PI * hz * t
-  return (Math.sin(p) * 0.8 + Math.sin(2 * p) * 0.12 + Math.sin(3 * p) * 0.04) * gain * amp
-}
-
-function renderInterval(rootPc: number, semitones: number): string {
-  const sr = 44100
-  const rootEnd = 0.5
-  const upperStart = 0.64
-  const upperEnd = 1.32
-  const samples = Math.floor(sr * (upperEnd + 0.04))
-  const pcm = new Int16Array(samples)
-  const rootHz = freqFromMidi(rootMidi(rootPc))
-  const toneHz = freqFromMidi(rootMidi(rootPc) + semitones)
-  for (let i = 0; i < samples; i += 1) {
-    const t = i / sr
-    const sample = softTone(t, rootHz, 0, rootEnd, 0.26) + softTone(t, toneHz, upperStart, upperEnd, 0.24)
-    pcm[i] = Math.max(-1, Math.min(1, sample)) * 32767
+  const elapsed = t - start
+  let sample = onsetNoise(t, start)
+  for (const partial of TONE.partials) {
+    sample += Math.sin(2 * Math.PI * hz * partial.ratio * elapsed) * partial.mix
   }
-  return encodeWav(pcm, sr)
+  return sample * gain * amp
 }
 
-function renderChord(pcs: number[]): string {
-  const sr = 44100
-  const samples = Math.floor(sr * 1.35)
-  const pcm = new Int16Array(samples)
-  const freqs = pcs.map((pc, i) => freqFromMidi(rootMidi(pc) + (i === 0 ? 0 : 12)))
-  for (let i = 0; i < samples; i += 1) {
-    const t = i / sr
-    let s = 0
-    freqs.forEach((hz, n) => {
-      s += softTone(t, hz, 0, 1.28, n === 0 ? 0.2 : 0.12)
-    })
-    pcm[i] = Math.max(-1, Math.min(1, s)) * 32767
+function fadeBufferEdges(samples: Float32Array): void {
+  const fadeSamples = Math.max(1, Math.floor(SAMPLE_RATE * 0.004))
+  const limit = Math.min(fadeSamples, Math.floor(samples.length / 2))
+  for (let i = 0; i < limit; i += 1) {
+    const gain = 0.5 * (1 - Math.cos((Math.PI * (i + 1)) / (limit + 1)))
+    samples[i] *= gain
+    samples[samples.length - 1 - i] *= gain
   }
-  return encodeWav(pcm, sr)
 }
 
-function encodeWav(pcm: Int16Array, sampleRate: number): string {
+function toPcm(samples: Float32Array): Int16Array {
+  fadeBufferEdges(samples)
+  const pcm = new Int16Array(samples.length)
+  for (let i = 0; i < samples.length; i += 1) {
+    pcm[i] = Math.round(Math.max(-1, Math.min(1, samples[i])) * 32767)
+  }
+  return pcm
+}
+
+function encodeWav(pcm: Int16Array): string {
   const bytes = pcm.byteLength
   const buffer = new ArrayBuffer(44 + bytes)
   const view = new DataView(buffer)
@@ -88,23 +112,14 @@ function encodeWav(pcm: Int16Array, sampleRate: number): string {
   view.setUint32(16, 16, true)
   view.setUint16(20, 1, true)
   view.setUint16(22, 1, true)
-  view.setUint32(24, sampleRate, true)
-  view.setUint32(28, sampleRate * 2, true)
+  view.setUint32(24, SAMPLE_RATE, true)
+  view.setUint32(28, SAMPLE_RATE * 2, true)
   view.setUint16(32, 2, true)
   view.setUint16(34, 16, true)
   writeAscii(view, 36, 'data')
   view.setUint32(40, bytes, true)
   new Uint8Array(buffer, 44).set(new Uint8Array(pcm.buffer))
-  return `data:audio/wav;base64,${bytesToBase64(new Uint8Array(buffer))}`
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = ''
-  const chunk = 0x8000
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk))
-  }
-  return btoa(binary)
+  return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }))
 }
 
 function writeAscii(view: DataView, offset: number, text: string): void {
@@ -113,38 +128,160 @@ function writeAscii(view: DataView, offset: number, text: string): void {
   }
 }
 
-async function playUri(uri: string): Promise<boolean> {
-  const el = media()
-  el.pause()
-  el.currentTime = 0
-  el.src = uri
-  try {
-    await el.play()
-    unlocked = true
-    return true
-  } catch {
-    return false
+function renderInterval(rootPc: number, semitones: number): string {
+  const rootEnd = 0.5
+  const upperStart = 0.64
+  const upperEnd = 1.32
+  const samples = Math.floor(SAMPLE_RATE * (upperEnd + 0.04))
+  const mix = new Float32Array(samples)
+  const rootHz = freqFromMidi(rootMidi(rootPc))
+  const toneHz = freqFromMidi(rootMidi(rootPc) + semitones)
+  for (let i = 0; i < samples; i += 1) {
+    const t = i / SAMPLE_RATE
+    mix[i] =
+      synthSample(t, rootHz, 0, rootEnd, 0.26) + synthSample(t, toneHz, upperStart, upperEnd, 0.24)
   }
+  return encodeWav(toPcm(mix))
+}
+
+function renderSingle(pc: number): string {
+  const samples = Math.floor(SAMPLE_RATE * (TONE.askedDur + 0.04))
+  const mix = new Float32Array(samples)
+  const hz = freqFromMidi(rootMidi(pc))
+  for (let i = 0; i < samples; i += 1) {
+    mix[i] = synthSample(i / SAMPLE_RATE, hz, 0, TONE.askedDur, TONE.askedAmp)
+  }
+  return encodeWav(toPcm(mix))
+}
+
+function voicedMidis(pcs: number[]): number[] {
+  const midis: number[] = []
+  for (const pc of pcs) {
+    let midi = rootMidi(pc)
+    if (midis.length > 0) {
+      while (midi <= midis[midis.length - 1]) midi += 12
+    }
+    midis.push(midi)
+  }
+  return midis
+}
+
+function renderRun(pcs: number[]): string {
+  const midis = voicedMidis(pcs)
+  const total = (midis.length - 1) * TONE.runStep + TONE.runNote + 0.05
+  const samples = Math.floor(SAMPLE_RATE * total)
+  const mix = new Float32Array(samples)
+  const hz = midis.map(freqFromMidi)
+  for (let i = 0; i < samples; i += 1) {
+    const t = i / SAMPLE_RATE
+    let sample = 0
+    for (let n = 0; n < hz.length; n += 1) {
+      const start = n * TONE.runStep
+      const end = start + TONE.runNote
+      if (t >= start && t <= end) sample += synthSample(t, hz[n], start, end, TONE.runAmp)
+    }
+    mix[i] = sample
+  }
+  return encodeWav(toPcm(mix))
+}
+
+function cachedInterval(rootPc: number, semitones: number): string {
+  const key = `${rootPc}:${semitones}`
+  const hit = intervalCache.get(key)
+  if (hit) return hit
+  const uri = renderInterval(rootPc, semitones)
+  intervalCache.set(key, uri)
+  return uri
+}
+
+function cachedSingle(pc: number): string {
+  const hit = singleCache.get(pc)
+  if (hit) return hit
+  const uri = renderSingle(pc)
+  singleCache.set(pc, uri)
+  return uri
+}
+
+function cachedRun(pcs: number[]): string {
+  const key = pcs.join(',')
+  const hit = runCache.get(key)
+  if (hit) return hit
+  const uri = renderRun(pcs)
+  runCache.set(key, uri)
+  return uri
+}
+
+function warmCache(): void {
+  let pc = 55
+  const step = () => {
+    const limit = Math.min(pc + 3, 85)
+    for (; pc < limit; pc += 1) cachedSingle(pc)
+    if (pc <= 84) window.setTimeout(step, 0)
+  }
+  step()
+}
+
+function playUri(uri: string): Promise<boolean> {
+  const now = Date.now()
+  if (uri === lastUri && now - lastPlayAt < 140) return Promise.resolve(true)
+  lastUri = uri
+  lastPlayAt = now
+
+  const el = media()
+  if (el.src !== uri) el.src = uri
+  else {
+    try {
+      el.currentTime = 0
+    } catch {
+      // Some mobile browsers reject resetting currentTime before metadata loads.
+    }
+  }
+
+  const result = el.play()
+  if (!result) {
+    unlocked = true
+    return Promise.resolve(true)
+  }
+  return result
+    .then(() => {
+      unlocked = true
+      return true
+    })
+    .catch(() => false)
 }
 
 export async function playRootAndInterval(rootPc: number, semitones: number): Promise<boolean> {
   if (!unlocked) return false
-  return playUri(renderInterval(rootPc, semitones))
+  return playUri(cachedInterval(rootPc, semitones))
 }
 
 export async function unlockAndPlay(rootPc: number, semitones: number): Promise<boolean> {
-  return playUri(renderInterval(rootPc, semitones))
+  const ok = await playUri(cachedInterval(rootPc, semitones))
+  if (ok) warmCache()
+  return ok
+}
+
+export function playCadenceRoots(pcs: number[]): void {
+  if (pcs.length === 0) return
+  void playUri(cachedRun(pcs))
 }
 
 export async function playChord(chord: Chord, highlightPc?: number): Promise<boolean> {
   if (!unlocked) return false
   const tones = allSpelledTones(chord)
   const pcs = tones
-    .filter((t) => t.degree === '1' || t.degree === '3' || t.degree === '5' || t.degree === '7' || notePc(t.note) === highlightPc)
+    .filter(
+      (t) =>
+        t.degree === '1' ||
+        t.degree === '3' ||
+        t.degree === '5' ||
+        t.degree === '7' ||
+        notePc(t.note) === highlightPc,
+    )
     .map((t) => notePc(t.note))
   const unique: number[] = []
   for (const pc of pcs) {
     if (!unique.includes(pc)) unique.push(pc)
   }
-  return playUri(renderChord(unique))
+  return playUri(cachedRun(unique))
 }

@@ -37,6 +37,10 @@ function isSequence(value: unknown): value is SequenceId {
   return value === 'isolated' || value === 'ii-V-I' || value === 'minor-ii-V-i' || value === 'I-vi-ii-V'
 }
 
+function isDrillMode(value: unknown): value is DrillSettings['drillMode'] {
+  return value === 'tones' || value === 'tones+mode' || value === 'cadence'
+}
+
 export function loadSettings(): DrillSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -58,6 +62,7 @@ export function loadSettings(): DrillSettings {
           ? parsed.degrees.filter(isDegree)
           : DEFAULT_SETTINGS.degrees,
       sequence: isSequence(parsed.sequence) ? parsed.sequence : DEFAULT_SETTINGS.sequence,
+      drillMode: isDrillMode(parsed.drillMode) ? parsed.drillMode : DEFAULT_SETTINGS.drillMode,
       autoSound: typeof parsed.autoSound === 'boolean' ? parsed.autoSound : DEFAULT_SETTINGS.autoSound,
       parentPrefs: { ...DEFAULT_SETTINGS.parentPrefs, ...parsed.parentPrefs },
     }
