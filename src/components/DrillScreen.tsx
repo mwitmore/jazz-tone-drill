@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { isAudioReady, playCadenceRoots, playRootAndInterval, unlockAndPlay } from '../audio/playChord.ts'
+import { isAudioReady, playCadence, playRootAndInterval, unlockAndPlay } from '../audio/playChord.ts'
 import { CadenceCard } from './CadenceCard.tsx'
-import { dealCadence, cadenceRootPcs, type CadenceQuestion } from '../theory/cadences.ts'
+import { dealCadence, type CadenceQuestion } from '../theory/cadences.ts'
 import { notePc } from '../theory/notes.ts'
 import { advanceCursor, dealQuestion, gradeMode, gradeNote, initialCursor } from '../drills/engine.ts'
 import type { DrillSettings, Question, Score, SessionCursor } from '../drills/types.ts'
@@ -235,7 +235,7 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
           className="ghost-btn"
           onClick={() => {
             if (isCadence) {
-              playCadenceRoots(cadenceRootPcs(cadenceQuestion))
+              playCadence(cadenceQuestion.chords)
               return
             }
             hearCurrent(true)

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { playCadenceRoots } from '../audio/playChord.ts'
-import { cadenceRootPcs, formatKeyName, type CadenceQuestion } from '../theory/cadences.ts'
+import { playCadence } from '../audio/playChord.ts'
+import { formatKeyName, type CadenceQuestion } from '../theory/cadences.ts'
 
 type CadenceCardProps = {
   question: CadenceQuestion
@@ -27,7 +27,7 @@ export function CadenceCard({ question, autoAdvanceSec, onAnswer, onNext }: Cade
 
   useEffect(() => {
     if (phase !== 'reveal') return
-    playCadenceRoots(cadenceRootPcs(question))
+    playCadence(question.chords)
   }, [phase, question])
 
   useEffect(() => {
@@ -57,7 +57,7 @@ export function CadenceCard({ question, autoAdvanceSec, onAnswer, onNext }: Cade
 
   useEffect(() => {
     if (phase !== 'reveal' || autoAdvanceSec === null) return
-    const timer = window.setTimeout(() => onNext(), 2200)
+    const timer = window.setTimeout(() => onNext(), 2800)
     return () => window.clearTimeout(timer)
   }, [phase, autoAdvanceSec, onNext])
 

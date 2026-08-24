@@ -1,4 +1,4 @@
-import { allSpelledTones, type Chord } from '../theory/chords.ts'
+import { allSpelledTones, formatChord, type Chord } from '../theory/chords.ts'
 import { notePc } from '../theory/notes.ts'
 
 const SAMPLE_RATE = 44100
@@ -11,6 +11,9 @@ const TONE = {
   runNote: 0.3,
   runStep: 0.22,
   runAmp: 0.18,
+  cadenceChord: 0.42,
+  cadenceGap: 0.1,
+  cadenceAmp: 0.11,
   partials: [
     { ratio: 1, mix: 0.94 },
     { ratio: 2, mix: 0.05 },
@@ -26,6 +29,7 @@ let lastPlayAt = 0
 const intervalCache = new Map<string, string>()
 const singleCache = new Map<number, string>()
 const runCache = new Map<string, string>()
+const cadenceCache = new Map<string, string>()
 
 function media(): HTMLAudioElement {
   if (!player) {
@@ -154,20 +158,48 @@ function renderSingle(pc: number): string {
   return encodeWav(toPcm(mix))
 }
 
-function voicedMidis(pcs: number[]): number[] {
+function voiceLeadingBassMidis(pcs: number[]): number[] {
   const midis: number[] = []
-  for (const pc of pcs) {
-    let midi = rootMidi(pc)
-    if (midis.length > 0) {
-      while (midi <= midis[midis.length - 1]) midi += 12
+  for (let i = 0; i < pcs.length; i += 1) {
+    const pc = pcs[i]
+    if (i === 0) {
+      let midi = rootMidi(pc)
+      while (midi > 66) midi -= 12
+      while (midi < 48) midi += 12
+      midis.push(midi)
+      continue
     }
-    midis.push(midi)
+    let best = rootMidi(pc)
+    let bestDistance = Infinity
+    for (let octave = -2; octave <= 2; octave += 1) {
+      const candidate = rootMidi(pc) + octave * 12
+      const distance = Math.abs(candidate - midis[i - 1])
+      if (distance < bestDistance) {
+        bestDistance = distance
+        best = candidate
+      }
+    }
+    midis.push(best)
   }
   return midis
 }
 
+function shellMidis(chord: Chord, bassMidi: number): number[] {
+  const tones = allSpelledTones(chord)
+  const third = tones.find((tone) => tone.degree === '3')
+  const seventh = tones.find((tone) => tone.degree === '7')
+  if (!third || !seventh) return [bassMidi]
+  const rootPc = notePc(chord.root)
+  const toInterval = (pc: number) => ((pc - rootPc + 12) % 12)
+  let thirdMidi = bassMidi + toInterval(notePc(third.note))
+  let seventhMidi = bassMidi + toInterval(notePc(seventh.note))
+  if (thirdMidi <= bassMidi) thirdMidi += 12
+  if (seventhMidi <= thirdMidi) seventhMidi += 12
+  return [bassMidi, thirdMidi, seventhMidi]
+}
+
 function renderRun(pcs: number[]): string {
-  const midis = voicedMidis(pcs)
+  const midis = voiceLeadingBassMidis(pcs)
   const total = (midis.length - 1) * TONE.runStep + TONE.runNote + 0.05
   const samples = Math.floor(SAMPLE_RATE * total)
   const mix = new Float32Array(samples)
@@ -179,6 +211,28 @@ function renderRun(pcs: number[]): string {
       const start = n * TONE.runStep
       const end = start + TONE.runNote
       if (t >= start && t <= end) sample += synthSample(t, hz[n], start, end, TONE.runAmp)
+    }
+    mix[i] = sample
+  }
+  return encodeWav(toPcm(mix))
+}
+
+function renderCadence(chords: Chord[]): string {
+  const bassMidis = voiceLeadingBassMidis(chords.map((chord) => notePc(chord.root)))
+  const step = TONE.cadenceChord + TONE.cadenceGap
+  const total = chords.length * TONE.cadenceChord + (chords.length - 1) * TONE.cadenceGap + 0.05
+  const samples = Math.floor(SAMPLE_RATE * total)
+  const mix = new Float32Array(samples)
+  for (let i = 0; i < samples; i += 1) {
+    const t = i / SAMPLE_RATE
+    let sample = 0
+    for (let c = 0; c < chords.length; c += 1) {
+      const start = c * step
+      const end = start + TONE.cadenceChord
+      if (t < start || t > end) continue
+      for (const midi of shellMidis(chords[c], bassMidis[c])) {
+        sample += synthSample(t, freqFromMidi(midi), start, end, TONE.cadenceAmp)
+      }
     }
     mix[i] = sample
   }
@@ -208,6 +262,15 @@ function cachedRun(pcs: number[]): string {
   if (hit) return hit
   const uri = renderRun(pcs)
   runCache.set(key, uri)
+  return uri
+}
+
+function cachedCadence(chords: Chord[]): string {
+  const key = chords.map((chord) => formatChord(chord)).join('|')
+  const hit = cadenceCache.get(key)
+  if (hit) return hit
+  const uri = renderCadence(chords)
+  cadenceCache.set(key, uri)
   return uri
 }
 
@@ -259,6 +322,11 @@ export async function unlockAndPlay(rootPc: number, semitones: number): Promise<
   const ok = await playUri(cachedInterval(rootPc, semitones))
   if (ok) warmCache()
   return ok
+}
+
+export function playCadence(chords: Chord[]): void {
+  if (chords.length === 0) return
+  void playUri(cachedCadence(chords))
 }
 
 export function playCadenceRoots(pcs: number[]): void {
