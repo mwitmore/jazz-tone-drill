@@ -8,6 +8,11 @@ describe('cadences', () => {
     expect(chords.map(formatChord)).toEqual(['Dm7', 'G7', 'Cmaj7'])
   })
 
+  it('builds tritone-sub V in C', () => {
+    const chords = cadenceChords('tritone-v', 'C')
+    expect(chords.map(formatChord)).toEqual(['Dm7', 'D♭7', 'Cmaj7'])
+  })
+
   it('hides one chord symbol in the dealt question', () => {
     const q = dealCadence(['C'])
     expect(q.symbols).toHaveLength(3)

@@ -1,5 +1,5 @@
 import { formatChord, type Chord, type ChordQuality } from './chords.ts'
-import { M2, M3, M6, P4, P5, m2, m3, m6, m7, note, notePc, transpose, type Note } from './notes.ts'
+import { M2, M3, M6, P4, P5, m2, m3, m6, m7, note, transpose, type Note } from './notes.ts'
 import { ALL_KEYS } from './progressions.ts'
 
 export const CADENCE_IDS = [
@@ -122,10 +122,6 @@ export function dealCadence(keys: string[], previousKey?: string): CadenceQuesti
     expected,
     choices,
   }
-}
-
-export function cadenceRootPcs(question: CadenceQuestion): number[] {
-  return question.chords.map((c) => notePc(c.root))
 }
 
 export function formatKeyName(keyName: string): string {
