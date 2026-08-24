@@ -468,13 +468,35 @@ h3 {
   gap: 8px 12px;
 }
 
-.tone-row span,
-.scale-row span {
+.tone-row > span,
+.scale-row > span {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   min-width: 1.9rem;
   font-family: Fraunces, Georgia, serif;
   font-size: 1.1rem;
+}
+
+.note-name {
+  display: inline-flex;
+  align-items: baseline;
+  height: 1.2em;
+  line-height: 1;
+}
+
+.note-letter {
+  line-height: 1;
+}
+
+.note-acc {
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', sans-serif;
+  font-size: 0.78em;
+  font-weight: 500;
+  line-height: 1;
+  position: relative;
+  top: -0.08em;
+  margin-left: 0.04em;
 }
 
 .tone-row small,
