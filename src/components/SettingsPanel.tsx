@@ -42,7 +42,7 @@ export function SettingsPanel({ open, settings, onChange, onClose, onResetScore 
         </header>
 
         <p className="help">
-          iReal covers time. This drill forces you to name the tone — and, if you want, the parent scale — before the next change. Play always sounds the root, then the asked tone. Turn on auto sound if you want that on every new card (tap Play once first).
+          iReal covers time. A names the tone. B adds the parent mode. C (beta) flashes a jazz cadence, hides one chord, and you name the missing one — including tritone-sub and backdoor moves. Play always sounds the root, then the asked tone. Turn on auto sound if you want that on every new card (tap Play once first).
         </p>
 
         <section>
@@ -81,6 +81,13 @@ export function SettingsPanel({ open, settings, onChange, onClose, onResetScore 
               onClick={() => onChange({ ...settings, drillMode: 'tones+mode' })}
             >
               B · Tones + mode
+            </button>
+            <button
+              type="button"
+              className={settings.drillMode === 'cadence' ? 'is-on' : ''}
+              onClick={() => onChange({ ...settings, drillMode: 'cadence' })}
+            >
+              C · Cadence (beta)
             </button>
           </div>
         </section>

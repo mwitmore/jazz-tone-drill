@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { isAudioReady, playRootAndInterval, unlockAndPlay } from '../audio/playChord.ts'
+import { isAudioReady, playCadenceRoots, playRootAndInterval, unlockAndPlay } from '../audio/playChord.ts'
+import { CadenceCard } from './CadenceCard.tsx'
+import { dealCadence, cadenceRootPcs, type CadenceQuestion } from '../theory/cadences.ts'
 import { notePc } from '../theory/notes.ts'
 import { advanceCursor, dealQuestion, gradeMode, gradeNote, initialCursor } from '../drills/engine.ts'
 import type { DrillSettings, Question, Score, SessionCursor } from '../drills/types.ts'
@@ -9,24 +11,38 @@ import { NotePad } from './NotePad.tsx'
 import { RevealCard } from './RevealCard.tsx'
 import { SettingsPanel } from './SettingsPanel.tsx'
 
+const SET_SIZE = 20
+
 type DrillScreenProps = {
   settings: DrillSettings
   onSettingsChange: (next: DrillSettings) => void
 }
 
+type Miss = {
+  symbol: string
+  degreeLabel: string
+  expected: string
+  mode: string | null
+}
+
+type ScreenPhase = 'ask' | 'reveal' | 'summary'
+
 export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
   const [cursor, setCursor] = useState<SessionCursor>(() => initialCursor(settings))
   const [question, setQuestion] = useState<Question>(() => dealQuestion(settings, initialCursor(settings)))
+  const [cadenceQuestion, setCadenceQuestion] = useState<CadenceQuestion>(() => dealCadence(settings.keys))
   const [pickedNote, setPickedNote] = useState<string | null>(null)
   const [pickedMode, setPickedMode] = useState<ModeId | null>(null)
-  const [phase, setPhase] = useState<'ask' | 'reveal'>('ask')
+  const [phase, setPhase] = useState<ScreenPhase>('ask')
   const [noteOk, setNoteOk] = useState(false)
   const [modeOk, setModeOk] = useState<boolean | null>(null)
   const [score, setScore] = useState<Score>({ correct: 0, total: 0, streak: 0 })
+  const [misses, setMisses] = useState<Miss[]>([])
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [remainingMs, setRemainingMs] = useState<number | null>(null)
   const settingsRef = useRef(settings)
   const questionRef = useRef(question)
+  const cadenceRef = useRef(cadenceQuestion)
   const pickedNoteRef = useRef(pickedNote)
   const pickedModeRef = useRef(pickedMode)
   const cursorRef = useRef(cursor)
@@ -34,10 +50,12 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
   const goNextRef = useRef<() => void>(() => {})
   settingsRef.current = settings
   questionRef.current = question
+  cadenceRef.current = cadenceQuestion
   pickedNoteRef.current = pickedNote
   pickedModeRef.current = pickedMode
   cursorRef.current = cursor
 
+  const isCadence = settings.drillMode === 'cadence'
   const needsMode = settings.drillMode === 'tones+mode'
   const drillSignature = [
     settings.sequence,
@@ -62,11 +80,28 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
     setRemainingMs(nextSettings.autoAdvanceSec === null ? null : nextSettings.autoAdvanceSec * 1000)
   }
 
+  const keysSignature = settings.keys.join(',')
+
   useEffect(() => {
+    if (settingsRef.current.drillMode === 'cadence') return
     dealFrom(settingsRef.current, initialCursor(settingsRef.current))
   }, [drillSignature])
 
+  useEffect(() => {
+    if (settings.drillMode !== 'cadence') return
+    setCadenceQuestion(dealCadence(settings.keys))
+    setPhase('ask')
+  }, [settings.drillMode, settings.keys])
+
   const goNext = () => {
+    if (score.total >= SET_SIZE) {
+      setPhase('summary')
+      return
+    }
+    if (settingsRef.current.drillMode === 'cadence') {
+      setCadenceQuestion(dealCadence(settingsRef.current.keys, cadenceRef.current.keyName))
+      return
+    }
     const next = advanceCursor(settingsRef.current, cursorRef.current)
     dealFrom(settingsRef.current, next)
   }
@@ -88,6 +123,20 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
     }))
   }
   revealRef.current = reveal
+
+  const onCadenceAnswer = (correct: boolean, expected: string, label: string) => {
+    setScore((s) => ({
+      correct: s.correct + (correct ? 1 : 0),
+      total: s.total + 1,
+      streak: correct ? s.streak + 1 : 0,
+    }))
+    if (!correct) {
+      setMisses((m) => [
+        ...m,
+        { symbol: label, degreeLabel: 'missing chord', expected, mode: null },
+      ])
+    }
+  }
 
   const onPickNote = (name: string) => {
     if (phase !== 'ask') return
@@ -120,14 +169,15 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
   }
 
   useEffect(() => {
-    if (!settings.autoSound) return
+    if (isCadence || !settings.autoSound) return
     const id = `${question.symbol}:${question.degree}:${question.expectedSemitones}`
     if (!isAudioReady()) return
     if (heardIdRef.current === id) return
     hearCurrent(false)
-  }, [question.symbol, question.degree, question.expectedSemitones, settings.autoSound])
+  }, [question.symbol, question.degree, question.expectedSemitones, settings.autoSound, isCadence])
 
   useEffect(() => {
+    if (isCadence) return
     if (phase !== 'ask' || settings.autoAdvanceSec === null) {
       if (settings.autoAdvanceSec === null) setRemainingMs(null)
       return
@@ -154,13 +204,25 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
       }
     }, 50)
     return () => window.clearInterval(tick)
-  }, [question.symbol, question.degree, phase, settings.autoAdvanceSec])
+  }, [question.symbol, question.degree, phase, settings.autoAdvanceSec, isCadence])
 
   useEffect(() => {
+    if (isCadence) return
     if (phase !== 'reveal' || settings.autoAdvanceSec === null) return
     const t = window.setTimeout(() => goNextRef.current(), 1600)
     return () => window.clearTimeout(t)
-  }, [phase, settings.autoAdvanceSec])
+  }, [phase, settings.autoAdvanceSec, isCadence])
+
+  const resetSet = () => {
+    setScore({ correct: 0, total: 0, streak: 0 })
+    setMisses([])
+    setPhase('ask')
+    if (settingsRef.current.drillMode === 'cadence') {
+      setCadenceQuestion(dealCadence(settingsRef.current.keys, cadenceRef.current.keyName))
+      return
+    }
+    dealFrom(settingsRef.current, initialCursor(settingsRef.current))
+  }
 
   const prompt = useMemo(() => {
     if (needsMode) return `Name the ${question.degreeLabel} and the parent mode`
@@ -173,88 +235,162 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
         <button
           type="button"
           className="ghost-btn"
-          onClick={() => hearCurrent(true)}
+          onClick={() => {
+            if (isCadence) {
+              playCadenceRoots(cadenceRootPcs(cadenceQuestion))
+              return
+            }
+            hearCurrent(true)
+          }}
         >
           Play
         </button>
         <p className="score">
-          {score.correct}/{score.total}
+          {score.total}/{SET_SIZE}
+          {score.total > 0 ? ` · ✓${score.correct}` : ''}
           {score.streak > 1 ? ` · ${score.streak}` : ''}
         </p>
-        <button type="button" className="primary-btn" onClick={goNext}>
-          {phase === 'reveal' ? 'Next' : 'Skip'}
-        </button>
+        {!isCadence && phase === 'ask' && (
+          <button type="button" className="primary-btn" onClick={goNext}>
+            Skip
+          </button>
+        )}
+        {isCadence && <span className="score" aria-hidden="true" />}
       </header>
 
       <div className="drill">
-      {question.sequence && (
-        <ol className="sequence">
-          {question.sequence.symbols.map((symbol, i) => (
-            <li key={`${symbol}-${i}`} className={i === question.sequence?.index ? 'is-current' : ''}>
-              {symbol}
-            </li>
-          ))}
-        </ol>
-      )}
+        {phase === 'summary' ? (
+          <section className="summary" aria-live="polite">
+            <p className="summary-title">
+              {score.correct} of {SET_SIZE}
+            </p>
+            <p className="summary-sub">
+              {misses.length === 0 ? 'Clean set. Nice.' : 'Worth another look:'}
+            </p>
+            {misses.length > 0 && (
+              <ul className="miss-list">
+                {misses.map((miss, index) => (
+                  <li key={`${miss.symbol}-${index}`}>
+                    <b>{miss.symbol}</b> — {miss.degreeLabel} is {miss.expected}
+                    {miss.mode ? ` · ${miss.mode}` : ''}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button type="button" className="primary-btn summary-btn" onClick={resetSet}>
+              New set
+            </button>
+          </section>
+        ) : isCadence ? (
+          <CadenceCard
+            question={cadenceQuestion}
+            autoAdvanceSec={settings.autoAdvanceSec}
+            onAnswer={onCadenceAnswer}
+            onNext={goNext}
+          />
+        ) : (
+          <>
+            {question.sequence && (
+              <ol className="sequence">
+                {question.sequence.symbols.map((symbol, i) => (
+                  <li key={`${symbol}-${i}`} className={i === question.sequence?.index ? 'is-current' : ''}>
+                    {symbol}
+                  </li>
+                ))}
+              </ol>
+            )}
 
-      <div className="chord-stage">
-        <p className="chord-symbol">{question.symbol}</p>
-        <p className="prompt">{prompt}</p>
-        {settings.autoSound && !soundOn && (
-          <p className="sound-hint">Tap Play once to unlock auto sound</p>
-        )}
-        {settings.autoAdvanceSec !== null && remainingMs !== null && phase === 'ask' && (
-          <div
-            className={`countdown ${remainingMs <= 3000 ? 'is-urgent' : ''}`}
-            role="timer"
-            aria-live="off"
-            aria-label={`${Math.ceil(remainingMs / 1000)} seconds left`}
-          >
-            <div
-              className="countdown-track"
-              style={{
-                ['--progress' as string]: `${(remainingMs / (settings.autoAdvanceSec * 1000)) * 100}%`,
-              }}
-            >
-              <div className="countdown-fill" />
+            <div className="chord-stage">
+              <p className="chord-symbol">{question.symbol}</p>
+              <p className="prompt">{prompt}</p>
+              {settings.autoSound && !soundOn && (
+                <p className="sound-hint">Tap Play once to unlock auto sound</p>
+              )}
+              {settings.autoAdvanceSec !== null && remainingMs !== null && phase === 'ask' && (
+                <div
+                  className={`countdown ${remainingMs <= 3000 ? 'is-urgent' : ''}`}
+                  role="timer"
+                  aria-live="off"
+                  aria-label={`${Math.ceil(remainingMs / 1000)} seconds left`}
+                >
+                  <div
+                    className="countdown-track"
+                    style={{
+                      ['--progress' as string]: `${(remainingMs / (settings.autoAdvanceSec * 1000)) * 100}%`,
+                    }}
+                  >
+                    <div className="countdown-fill" />
+                  </div>
+                  <p className="countdown-num">{Math.max(0, Math.ceil(remainingMs / 1000))}</p>
+                </div>
+              )}
             </div>
-            <p className="countdown-num">{Math.max(0, Math.ceil(remainingMs / 1000))}</p>
-          </div>
+
+            <NotePad
+              names={question.padNames}
+              selected={pickedNote}
+              disabled={phase === 'reveal'}
+              result={phase === 'reveal' ? (noteOk ? 'correct' : 'wrong') : null}
+              expectedName={question.expectedNoteName}
+              onPick={onPickNote}
+            />
+
+            {(needsMode || phase === 'reveal') && (
+              <ModeChips
+                choices={question.modeChoices}
+                selected={pickedMode}
+                disabled={phase === 'reveal' || !needsMode}
+                result={
+                  phase === 'reveal'
+                    ? needsMode
+                      ? modeOk
+                        ? 'correct'
+                        : 'wrong'
+                      : 'correct'
+                    : null
+                }
+                expectedId={question.preferredModeId}
+                acceptable={question.acceptableModeIds}
+                onPick={onPickMode}
+              />
+            )}
+
+            {phase === 'reveal' ? (
+              <RevealCard question={question} noteOk={noteOk} modeOk={modeOk} />
+            ) : (
+              <div className="tempo-bar" role="group" aria-label="Auto-advance">
+                {([null, 4, 6, 8, 12] as const).map((sec) => (
+                  <button
+                    key={String(sec)}
+                    type="button"
+                    className={settings.autoAdvanceSec === sec ? 'is-on' : ''}
+                    onClick={() => onSettingsChange({ ...settings, autoAdvanceSec: sec })}
+                  >
+                    {sec === null ? 'Off' : `${sec}s`}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      <NotePad
-        names={question.padNames}
-        selected={pickedNote}
-        disabled={phase === 'reveal'}
-        result={phase === 'reveal' ? (noteOk ? 'correct' : 'wrong') : null}
-        expectedName={question.expectedNoteName}
-        onPick={onPickNote}
-      />
-
-      {(needsMode || phase === 'reveal') && (
-        <ModeChips
-          choices={question.modeChoices}
-          selected={pickedMode}
-          disabled={phase === 'reveal' || !needsMode}
-          result={
-            phase === 'reveal'
-              ? needsMode
-                ? modeOk
-                  ? 'correct'
-                  : 'wrong'
-                : 'correct'
-              : null
-          }
-          expectedId={question.preferredModeId}
-          acceptable={question.acceptableModeIds}
-          onPick={onPickMode}
-        />
+      {!isCadence && phase !== 'summary' && phase === 'reveal' && (
+        <div className="tempo-bar reveal-tempo" role="group" aria-label="Auto-advance">
+          {([null, 4, 6, 8, 12] as const).map((sec) => (
+            <button
+              key={String(sec)}
+              type="button"
+              className={settings.autoAdvanceSec === sec ? 'is-on' : ''}
+              onClick={() => onSettingsChange({ ...settings, autoAdvanceSec: sec })}
+            >
+              {sec === null ? 'Off' : `${sec}s`}
+            </button>
+          ))}
+        </div>
       )}
 
-      {phase === 'reveal' ? (
-        <RevealCard question={question} noteOk={noteOk} modeOk={modeOk} />
-      ) : (
+      {isCadence && phase !== 'summary' && (
         <div className="tempo-bar" role="group" aria-label="Auto-advance">
           {([null, 4, 6, 8, 12] as const).map((sec) => (
             <button
@@ -268,7 +404,6 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
           ))}
         </div>
       )}
-      </div>
 
       <footer className="bottombar">
         <button type="button" className="icon-btn" onClick={() => setSettingsOpen(true)} aria-label="Settings">
@@ -289,6 +424,13 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
           >
             B
           </button>
+          <button
+            type="button"
+            className={settings.drillMode === 'cadence' ? 'is-on' : ''}
+            onClick={() => onSettingsChange({ ...settings, drillMode: 'cadence' })}
+          >
+            C
+          </button>
         </div>
       </footer>
 
@@ -297,7 +439,10 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
         settings={settings}
         onChange={onSettingsChange}
         onClose={() => setSettingsOpen(false)}
-        onResetScore={() => setScore({ correct: 0, total: 0, streak: 0 })}
+        onResetScore={() => {
+          setScore({ correct: 0, total: 0, streak: 0 })
+          setMisses([])
+        }}
       />
     </div>
   )

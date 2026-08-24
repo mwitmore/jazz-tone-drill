@@ -4,7 +4,7 @@ import type { ParentPrefs } from '../theory/parents.ts'
 import type { SequenceId } from '../theory/progressions.ts'
 import type { BuiltScale, ModeId } from '../theory/scales.ts'
 
-export type DrillMode = 'tones' | 'tones+mode'
+export type DrillMode = 'tones' | 'tones+mode' | 'cadence'
 export type KeyOrder = 'random' | 'cycle4'
 export type ThemeId = 'dark' | 'light'
 
