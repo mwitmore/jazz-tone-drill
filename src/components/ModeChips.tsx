@@ -1,4 +1,5 @@
 import { modeChipLabel, type ModeId } from '../theory/scales.ts'
+import { MusicText } from './MusicText.tsx'
 
 type ModeChipsProps = {
   choices: ModeId[]
@@ -35,7 +36,7 @@ export function ModeChips({
             disabled={disabled}
             onClick={() => onPick(id)}
           >
-            {modeChipLabel(id)}
+            <MusicText text={modeChipLabel(id)} />
           </button>
         )
       })}

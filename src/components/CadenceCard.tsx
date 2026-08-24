@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { playCadence } from '../audio/playChord.ts'
 import { formatKeyName, type CadenceQuestion } from '../theory/cadences.ts'
+import { MusicText } from './MusicText.tsx'
 
 type CadenceCardProps = {
   question: CadenceQuestion
@@ -73,7 +74,7 @@ export function CadenceCard({ question, autoAdvanceSec, onAnswer, onNext }: Cade
   return (
     <section className="cadence" aria-live="polite">
       <p className="cadence-key">
-        {question.label} · {formatKeyName(question.keyName)}
+        <MusicText text={`${question.label} · ${formatKeyName(question.keyName)}`} />
       </p>
 
       {autoAdvanceSec !== null && remainingMs !== null && phase === 'ask' && (
@@ -105,7 +106,7 @@ export function CadenceCard({ question, autoAdvanceSec, onAnswer, onNext }: Cade
               key={`${symbol}-${index}`}
               className={`${showBlank ? 'is-blank' : ''} ${revealSpot ? (correct ? 'is-right' : 'is-wrong') : ''}`}
             >
-              {showBlank ? '?' : symbol}
+              {showBlank ? '?' : <MusicText text={symbol} />}
             </li>
           )
         })}
@@ -113,7 +114,9 @@ export function CadenceCard({ question, autoAdvanceSec, onAnswer, onNext }: Cade
 
       {phase === 'ask' && <p className="prompt">Name the missing chord</p>}
       {phase === 'reveal' && (
-        <p className="reveal-verdict">{correct ? 'Right' : `It’s ${question.expected}`}</p>
+        <p className="reveal-verdict">
+          {correct ? 'Right' : <MusicText text={`It’s ${question.expected}`} />}
+        </p>
       )}
 
       <div className="cadence-choices">
@@ -131,7 +134,7 @@ export function CadenceCard({ question, autoAdvanceSec, onAnswer, onNext }: Cade
               disabled={phase === 'reveal'}
               onClick={() => pick(choice)}
             >
-              {choice}
+              <MusicText text={choice} />
             </button>
           )
         })}

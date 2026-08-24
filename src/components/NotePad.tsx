@@ -1,3 +1,5 @@
+import { MusicText } from './MusicText.tsx'
+
 type NotePadProps = {
   names: string[]
   selected: string | null
@@ -25,7 +27,7 @@ export function NotePad({ names, selected, disabled, result, expectedName, onPic
             disabled={disabled}
             onClick={() => onPick(name)}
           >
-            {name}
+            <MusicText text={name} />
           </button>
         )
       })}
