@@ -30,18 +30,41 @@ function env(t: number, start: number, end: number): number {
   if (t < start || t > end) return 0
   const pos = t - start
   const dur = end - start
-  const attack = 0.07
-  const release = 0.2
-  if (pos < attack) return pos / attack
-  if (pos > dur - release) return Math.max(0, (dur - pos) / release)
+  const attack = 0.012
+  const release = 0.06
+  if (pos < attack) return 0.5 * (1 - Math.cos((Math.PI * pos) / attack))
+  if (pos > dur - release) {
+    const releasePos = pos - (dur - release)
+    return 0.5 * (1 + Math.cos((Math.PI * releasePos) / release))
+  }
   return 1
 }
 
 function softTone(t: number, hz: number, start: number, end: number, amp: number): number {
   const gain = env(t, start, end)
   if (gain === 0) return 0
-  const p = 2 * Math.PI * hz * t
+  const elapsed = t - start
+  const p = 2 * Math.PI * hz * elapsed
   return (Math.sin(p) * 0.8 + Math.sin(2 * p) * 0.12 + Math.sin(3 * p) * 0.04) * gain * amp
+}
+
+function fadeBufferEdges(samples: Float32Array, sampleRate: number): void {
+  const fadeSamples = Math.max(1, Math.floor(sampleRate * 0.004))
+  const limit = Math.min(fadeSamples, Math.floor(samples.length / 2))
+  for (let i = 0; i < limit; i += 1) {
+    const gain = 0.5 * (1 - Math.cos((Math.PI * (i + 1)) / (limit + 1)))
+    samples[i] *= gain
+    samples[samples.length - 1 - i] *= gain
+  }
+}
+
+function toPcm(samples: Float32Array, sampleRate: number): Int16Array {
+  fadeBufferEdges(samples, sampleRate)
+  const pcm = new Int16Array(samples.length)
+  for (let i = 0; i < samples.length; i += 1) {
+    pcm[i] = Math.round(Math.max(-1, Math.min(1, samples[i])) * 32767)
+  }
+  return pcm
 }
 
 function renderInterval(rootPc: number, semitones: number): string {
@@ -50,21 +73,20 @@ function renderInterval(rootPc: number, semitones: number): string {
   const upperStart = 0.64
   const upperEnd = 1.32
   const samples = Math.floor(sr * (upperEnd + 0.04))
-  const pcm = new Int16Array(samples)
+  const mix = new Float32Array(samples)
   const rootHz = freqFromMidi(rootMidi(rootPc))
   const toneHz = freqFromMidi(rootMidi(rootPc) + semitones)
   for (let i = 0; i < samples; i += 1) {
     const t = i / sr
-    const sample = softTone(t, rootHz, 0, rootEnd, 0.26) + softTone(t, toneHz, upperStart, upperEnd, 0.24)
-    pcm[i] = Math.max(-1, Math.min(1, sample)) * 32767
+    mix[i] = softTone(t, rootHz, 0, rootEnd, 0.26) + softTone(t, toneHz, upperStart, upperEnd, 0.24)
   }
-  return encodeWav(pcm, sr)
+  return encodeWav(toPcm(mix, sr), sr)
 }
 
 function renderChord(pcs: number[]): string {
   const sr = 44100
   const samples = Math.floor(sr * 1.35)
-  const pcm = new Int16Array(samples)
+  const mix = new Float32Array(samples)
   const freqs = pcs.map((pc, i) => freqFromMidi(rootMidi(pc) + (i === 0 ? 0 : 12)))
   for (let i = 0; i < samples; i += 1) {
     const t = i / sr
@@ -72,9 +94,9 @@ function renderChord(pcs: number[]): string {
     freqs.forEach((hz, n) => {
       s += softTone(t, hz, 0, 1.28, n === 0 ? 0.2 : 0.12)
     })
-    pcm[i] = Math.max(-1, Math.min(1, s)) * 32767
+    mix[i] = s
   }
-  return encodeWav(pcm, sr)
+  return encodeWav(toPcm(mix, sr), sr)
 }
 
 function encodeWav(pcm: Int16Array, sampleRate: number): string {
@@ -115,7 +137,9 @@ function writeAscii(view: DataView, offset: number, text: string): void {
 
 async function playUri(uri: string): Promise<boolean> {
   const el = media()
-  el.pause()
+  if (!el.paused) {
+    el.pause()
+  }
   el.currentTime = 0
   el.src = uri
   try {
