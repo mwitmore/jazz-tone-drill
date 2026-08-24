@@ -1,5 +1,6 @@
 import { allSpelledTones, formatChord, type Chord } from '../theory/chords.ts'
 import { notePc } from '../theory/notes.ts'
+import { voiceLeadCadence, voiceLeadingBassMidis } from './cadenceVoicing.ts'
 
 const SAMPLE_RATE = 44100
 
@@ -11,13 +12,21 @@ const TONE = {
   runNote: 0.3,
   runStep: 0.22,
   runAmp: 0.18,
-  cadenceChord: 0.42,
-  cadenceGap: 0.1,
-  cadenceAmp: 0.11,
+  cadenceChord: 0.46,
+  cadenceGap: 0.08,
+  cadenceBassAmp: 0.2,
+  cadenceRootAmp: 0.16,
+  cadenceGuideAmp: 0.1,
   partials: [
     { ratio: 1, mix: 0.94 },
     { ratio: 2, mix: 0.05 },
     { ratio: 3, mix: 0.015 },
+  ],
+  bassPartials: [
+    { ratio: 1, mix: 0.62 },
+    { ratio: 2, mix: 0.26 },
+    { ratio: 3, mix: 0.1 },
+    { ratio: 4, mix: 0.04 },
   ],
 } as const
 
@@ -75,12 +84,20 @@ function onsetNoise(t: number, start: number): number {
   return noise
 }
 
-function synthSample(t: number, hz: number, start: number, end: number, amp: number): number {
+function synthSample(
+  t: number,
+  hz: number,
+  start: number,
+  end: number,
+  amp: number,
+  rich = false,
+): number {
   const gain = env(t, start, end)
   if (gain === 0) return 0
   const elapsed = t - start
   let sample = onsetNoise(t, start)
-  for (const partial of TONE.partials) {
+  const partials = rich ? TONE.bassPartials : TONE.partials
+  for (const partial of partials) {
     sample += Math.sin(2 * Math.PI * hz * partial.ratio * elapsed) * partial.mix
   }
   return sample * gain * amp
@@ -158,46 +175,6 @@ function renderSingle(pc: number): string {
   return encodeWav(toPcm(mix))
 }
 
-function voiceLeadingBassMidis(pcs: number[]): number[] {
-  const midis: number[] = []
-  for (let i = 0; i < pcs.length; i += 1) {
-    const pc = pcs[i]
-    if (i === 0) {
-      let midi = rootMidi(pc)
-      while (midi > 66) midi -= 12
-      while (midi < 48) midi += 12
-      midis.push(midi)
-      continue
-    }
-    let best = rootMidi(pc)
-    let bestDistance = Infinity
-    for (let octave = -2; octave <= 2; octave += 1) {
-      const candidate = rootMidi(pc) + octave * 12
-      const distance = Math.abs(candidate - midis[i - 1])
-      if (distance < bestDistance) {
-        bestDistance = distance
-        best = candidate
-      }
-    }
-    midis.push(best)
-  }
-  return midis
-}
-
-function shellMidis(chord: Chord, bassMidi: number): number[] {
-  const tones = allSpelledTones(chord)
-  const third = tones.find((tone) => tone.degree === '3')
-  const seventh = tones.find((tone) => tone.degree === '7')
-  if (!third || !seventh) return [bassMidi]
-  const rootPc = notePc(chord.root)
-  const toInterval = (pc: number) => ((pc - rootPc + 12) % 12)
-  let thirdMidi = bassMidi + toInterval(notePc(third.note))
-  let seventhMidi = bassMidi + toInterval(notePc(seventh.note))
-  if (thirdMidi <= bassMidi) thirdMidi += 12
-  if (seventhMidi <= thirdMidi) seventhMidi += 12
-  return [bassMidi, thirdMidi, seventhMidi]
-}
-
 function renderRun(pcs: number[]): string {
   const midis = voiceLeadingBassMidis(pcs)
   const total = (midis.length - 1) * TONE.runStep + TONE.runNote + 0.05
@@ -218,7 +195,7 @@ function renderRun(pcs: number[]): string {
 }
 
 function renderCadence(chords: Chord[]): string {
-  const bassMidis = voiceLeadingBassMidis(chords.map((chord) => notePc(chord.root)))
+  const voiced = voiceLeadCadence(chords)
   const step = TONE.cadenceChord + TONE.cadenceGap
   const total = chords.length * TONE.cadenceChord + (chords.length - 1) * TONE.cadenceGap + 0.05
   const samples = Math.floor(SAMPLE_RATE * total)
@@ -226,12 +203,18 @@ function renderCadence(chords: Chord[]): string {
   for (let i = 0; i < samples; i += 1) {
     const t = i / SAMPLE_RATE
     let sample = 0
-    for (let c = 0; c < chords.length; c += 1) {
+    for (let c = 0; c < voiced.length; c += 1) {
       const start = c * step
       const end = start + TONE.cadenceChord
       if (t < start || t > end) continue
-      for (const midi of shellMidis(chords[c], bassMidis[c])) {
-        sample += synthSample(t, freqFromMidi(midi), start, end, TONE.cadenceAmp)
+      for (const voice of voiced[c]) {
+        const amp =
+          voice.role === 'bass'
+            ? TONE.cadenceBassAmp
+            : voice.role === 'root'
+              ? TONE.cadenceRootAmp
+              : TONE.cadenceGuideAmp
+        sample += synthSample(t, freqFromMidi(voice.midi), start, end, amp, voice.role !== 'guide')
       }
     }
     mix[i] = sample
