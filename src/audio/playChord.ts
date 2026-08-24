@@ -317,6 +317,11 @@ export function playCadenceRoots(pcs: number[]): void {
   void playUri(cachedRun(pcs))
 }
 
+export function playScale(pcs: number[]): void {
+  if (pcs.length === 0) return
+  void playUri(cachedRun(pcs))
+}
+
 export async function playChord(chord: Chord, highlightPc?: number): Promise<boolean> {
   if (!unlocked) return false
   const tones = allSpelledTones(chord)
