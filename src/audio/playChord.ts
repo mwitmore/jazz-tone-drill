@@ -59,8 +59,15 @@ function freqFromMidi(midi: number): number {
   return 440 * 2 ** ((midi - 69) / 12)
 }
 
-function rootMidi(pc: number): number {
-  return 60 + pc
+export function rootMidi(pc: number): number {
+  return 60 + (((pc % 12) + 12) % 12)
+}
+
+export function ascendingMidi(pc: number, previousMidi?: number): number {
+  let midi = rootMidi(pc)
+  if (previousMidi === undefined) return midi
+  while (midi <= previousMidi) midi += 12
+  return midi
 }
 
 function env(t: number, start: number, end: number): number {
@@ -165,10 +172,10 @@ function renderInterval(rootPc: number, semitones: number): string {
   return encodeWav(toPcm(mix))
 }
 
-function renderSingle(pc: number): string {
+function renderSingle(midi: number): string {
   const samples = Math.floor(SAMPLE_RATE * (TONE.askedDur + 0.04))
   const mix = new Float32Array(samples)
-  const hz = freqFromMidi(rootMidi(pc))
+  const hz = freqFromMidi(midi)
   for (let i = 0; i < samples; i += 1) {
     mix[i] = synthSample(i / SAMPLE_RATE, hz, 0, TONE.askedDur, TONE.askedAmp)
   }
@@ -231,11 +238,11 @@ function cachedInterval(rootPc: number, semitones: number): string {
   return uri
 }
 
-function cachedSingle(pc: number): string {
-  const hit = singleCache.get(pc)
+function cachedSingle(midi: number): string {
+  const hit = singleCache.get(midi)
   if (hit) return hit
-  const uri = renderSingle(pc)
-  singleCache.set(pc, uri)
+  const uri = renderSingle(midi)
+  singleCache.set(midi, uri)
   return uri
 }
 
@@ -322,8 +329,8 @@ export function playScale(pcs: number[]): void {
   void playUri(cachedRun(pcs))
 }
 
-export function playTone(pc: number): void {
-  void playUri(cachedSingle(pc))
+export function playTone(midi: number): void {
+  void playUri(cachedSingle(midi))
 }
 
 export async function playChord(chord: Chord, highlightPc?: number): Promise<boolean> {

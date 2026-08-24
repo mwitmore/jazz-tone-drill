@@ -129,6 +129,7 @@ export function dealQuestion(settings: DrillSettings, cursor: SessionCursor): Qu
       degree: t.degree,
       label: t.label,
       name: t.name,
+      semitones: t.semitones,
     })),
     padNames,
     modeChoices: modeChoices(preferredModeId, `${symbol}:${degree}`),

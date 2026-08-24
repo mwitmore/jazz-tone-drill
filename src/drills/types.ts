@@ -40,7 +40,7 @@ export type Question = {
   parent: BuiltScale
   acceptableModeIds: ModeId[]
   preferredModeId: ModeId
-  allTones: { degree: DegreeId; label: string; name: string }[]
+  allTones: { degree: DegreeId; label: string; name: string; semitones: number }[]
   padNames: string[]
   modeChoices: ModeId[]
 }
