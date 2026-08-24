@@ -97,14 +97,15 @@ export function CadenceCard({ question, autoAdvanceSec, onAnswer, onNext }: Cade
 
       <ol className="cadence-row">
         {question.symbols.map((symbol, index) => {
-          const blank = phase === 'ask' && index === question.hiddenIndex
-          const revealSpot = phase === 'reveal' && index === question.hiddenIndex
+          const hidden = index === question.hiddenIndex
+          const showBlank = hidden && phase !== 'reveal'
+          const revealSpot = hidden && phase === 'reveal'
           return (
             <li
               key={`${symbol}-${index}`}
-              className={`${blank ? 'is-blank' : ''} ${revealSpot ? (correct ? 'is-right' : 'is-wrong') : ''}`}
+              className={`${showBlank ? 'is-blank' : ''} ${revealSpot ? (correct ? 'is-right' : 'is-wrong') : ''}`}
             >
-              {blank ? '?' : symbol}
+              {showBlank ? '?' : symbol}
             </li>
           )
         })}
