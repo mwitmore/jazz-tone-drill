@@ -322,6 +322,10 @@ export function playScale(pcs: number[]): void {
   void playUri(cachedRun(pcs))
 }
 
+export function playTone(pc: number): void {
+  void playUri(cachedSingle(pc))
+}
+
 export async function playChord(chord: Chord, highlightPc?: number): Promise<boolean> {
   if (!unlocked) return false
   const tones = allSpelledTones(chord)
