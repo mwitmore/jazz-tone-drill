@@ -24,7 +24,9 @@ export function RevealCard({ question, noteOk, modeOk, onNext }: RevealCardProps
       <div className="tone-row">
         {question.allTones.map((tone) => (
           <span key={tone.degree} className={tone.degree === question.degree ? 'is-asked' : ''}>
-            <small>{tone.label}</small>
+            <small>
+              <MusicText text={tone.label} />
+            </small>
             <MusicText className="note-name" text={tone.name} />
           </span>
         ))}
@@ -41,7 +43,9 @@ export function RevealCard({ question, noteOk, modeOk, onNext }: RevealCardProps
           <div className="scale-row">
             {parent.notes.map((n) => (
               <span key={`${n.label}-${n.name}`}>
-                <small>{n.label}</small>
+                <small>
+                  <MusicText text={n.label} />
+                </small>
                 <MusicText className="note-name" text={n.name} />
               </span>
             ))}
