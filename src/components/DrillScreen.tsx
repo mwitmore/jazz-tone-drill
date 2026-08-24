@@ -80,8 +80,6 @@ export function DrillScreen({ settings, onSettingsChange }: DrillScreenProps) {
     setRemainingMs(nextSettings.autoAdvanceSec === null ? null : nextSettings.autoAdvanceSec * 1000)
   }
 
-  const keysSignature = settings.keys.join(',')
-
   useEffect(() => {
     if (settingsRef.current.drillMode === 'cadence') return
     dealFrom(settingsRef.current, initialCursor(settingsRef.current))
