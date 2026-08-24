@@ -24,7 +24,7 @@ export function RevealCard({ question, noteOk, modeOk, onNext }: RevealCardProps
         {question.allTones.map((tone) => (
           <span key={tone.degree} className={tone.degree === question.degree ? 'is-asked' : ''}>
             <small>{tone.label}</small>
-            {tone.name}
+            <NoteName name={tone.name} />
           </span>
         ))}
       </div>
@@ -38,7 +38,7 @@ export function RevealCard({ question, noteOk, modeOk, onNext }: RevealCardProps
             {parent.notes.map((n) => (
               <span key={`${n.label}-${n.name}`}>
                 <small>{n.label}</small>
-                {n.name}
+                <NoteName name={n.name} />
               </span>
             ))}
           </div>
@@ -50,6 +50,17 @@ export function RevealCard({ question, noteOk, modeOk, onNext }: RevealCardProps
         </button>
       )}
     </section>
+  )
+}
+
+function NoteName({ name }: { name: string }) {
+  const letter = /^[A-G]/.test(name) ? name[0] : name
+  const accidental = letter === name ? '' : name.slice(letter.length)
+  return (
+    <span className="note-name">
+      <span className="note-letter">{letter}</span>
+      {accidental ? <span className="note-acc">{accidental}</span> : null}
+    </span>
   )
 }
 
