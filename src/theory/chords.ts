@@ -138,10 +138,22 @@ export function soundingSemitones(degree: DegreeId, intervalSemitones: number): 
   return intervalSemitones
 }
 
-export function allSpelledTones(chord: Chord): { degree: DegreeId; label: string; note: Note; name: string }[] {
+export function allSpelledTones(chord: Chord): {
+  degree: DegreeId
+  label: string
+  note: Note
+  name: string
+  semitones: number
+}[] {
   return QUALITY_TONES[chord.quality].map((tone) => {
     const n = transpose(chord.root, tone.interval)
-    return { degree: tone.degree, label: tone.label, note: n, name: formatNote(n) }
+    return {
+      degree: tone.degree,
+      label: tone.label,
+      note: n,
+      name: formatNote(n),
+      semitones: soundingSemitones(tone.degree, tone.interval.semitones),
+    }
   })
 }
 

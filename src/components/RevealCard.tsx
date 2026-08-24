@@ -1,6 +1,6 @@
-import { playTone } from '../audio/playChord.ts'
+import { ascendingMidi, playTone, rootMidi } from '../audio/playChord.ts'
 import type { Question } from '../drills/types.ts'
-import { note, notePc } from '../theory/notes.ts'
+import { notePc } from '../theory/notes.ts'
 import { MusicText } from './MusicText.tsx'
 
 type RevealCardProps = {
@@ -13,6 +13,12 @@ type RevealCardProps = {
 export function RevealCard({ question, noteOk, modeOk, onNext }: RevealCardProps) {
   const { parent } = question
   const showMode = modeOk !== null
+  const chordRootMidi = rootMidi(notePc(question.chord.root))
+  const scaleMidis: number[] = []
+  for (const n of parent.notes) {
+    scaleMidis.push(ascendingMidi(notePc(n.note), scaleMidis.at(-1)))
+  }
+
   return (
     <section className="reveal" aria-live="polite">
       <p className="reveal-verdict">
@@ -30,8 +36,8 @@ export function RevealCard({ question, noteOk, modeOk, onNext }: RevealCardProps
             type="button"
             className={tone.degree === question.degree ? 'is-asked' : ''}
             aria-label={`Play ${tone.name}`}
-            onPointerDown={() => playNamedTone(tone.name)}
-            onClick={() => playNamedTone(tone.name)}
+            onPointerDown={() => playTone(chordRootMidi + tone.semitones)}
+            onClick={() => playTone(chordRootMidi + tone.semitones)}
           >
             <small>
               <MusicText text={tone.label} />
@@ -50,13 +56,13 @@ export function RevealCard({ question, noteOk, modeOk, onNext }: RevealCardProps
             {parent.mode.family === 'diminished' ? '' : <MusicText text={parent.parentLabel} />}
           </p>
           <div className="scale-row">
-            {parent.notes.map((n) => (
+            {parent.notes.map((n, index) => (
               <button
                 key={`${n.label}-${n.name}`}
                 type="button"
                 aria-label={`Play ${n.name}`}
-                onPointerDown={() => playTone(notePc(n.note))}
-                onClick={() => playTone(notePc(n.note))}
+                onPointerDown={() => playTone(scaleMidis[index] ?? chordRootMidi)}
+                onClick={() => playTone(scaleMidis[index] ?? chordRootMidi)}
               >
                 <small>
                   <MusicText text={n.label} />
@@ -74,14 +80,6 @@ export function RevealCard({ question, noteOk, modeOk, onNext }: RevealCardProps
       )}
     </section>
   )
-}
-
-function playNamedTone(name: string): void {
-  try {
-    playTone(notePc(note(name)))
-  } catch {
-    // ignore unparseable display names
-  }
 }
 
 function ordinal(n: number): string {
