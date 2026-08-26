@@ -37,6 +37,12 @@ describe('spelling', () => {
     expect(formatNote(spelledTone(chord, '#9')!.note, 'ascii')).toBe('D#')
   })
 
+  it('spells Emaj7#9 3rd as G# and #9 as Fx (Lydian #2)', () => {
+    const chord = { root: note('E'), quality: 'maj7#9' as const }
+    expect(formatNote(spelledTone(chord, '3')!.note, 'ascii')).toBe('G#')
+    expect(formatNote(spelledTone(chord, '#9')!.note, 'ascii')).toBe('Fx')
+  })
+
   it('spells B7#11 #11 as E#', () => {
     const chord = { root: note('B'), quality: '7#11' as const }
     expect(formatNote(spelledTone(chord, '#11')!.note, 'ascii')).toBe('E#')

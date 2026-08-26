@@ -76,7 +76,7 @@ const QUALITY_TONES: Record<ChordQuality, ChordTone[]> = {
   '7#11': [T[1], T[3], T[5], T.b7, T.s11],
   mMaj7: [T[1], T.b3, T[5], T[7]],
   'maj7#11': [T[1], T[3], T[5], T[7], T.s11],
-  'maj7#9': [T[1], T.s9lyd, T[3], T[5], T[7]],
+  'maj7#9': [T[1], T[3], T[5], T[7], T.s9lyd],
 }
 
 const QUALITY_SYMBOL: Record<ChordQuality, string> = {

@@ -39,9 +39,7 @@ export function RevealCard({ question, noteOk, modeOk, onNext }: RevealCardProps
             onPointerDown={() => playTone(chordRootMidi + tone.semitones)}
             onClick={() => playTone(chordRootMidi + tone.semitones)}
           >
-            <small>
-              <MusicText text={tone.label} />
-            </small>
+            <small>{tone.label}</small>
             <MusicText className="note-name" text={tone.name} />
           </button>
         ))}
@@ -64,9 +62,7 @@ export function RevealCard({ question, noteOk, modeOk, onNext }: RevealCardProps
                 onPointerDown={() => playTone(scaleMidis[index] ?? chordRootMidi)}
                 onClick={() => playTone(scaleMidis[index] ?? chordRootMidi)}
               >
-                <small>
-                  <MusicText text={n.label} />
-                </small>
+                <small>{n.label}</small>
                 <MusicText className="note-name" text={n.name} />
               </button>
             ))}
